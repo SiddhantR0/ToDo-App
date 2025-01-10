@@ -1,47 +1,80 @@
-// Select DOM elements
-const taskNameInput = document.getElementById("task-name");
-const addTaskButton = document.getElementById("add-task-btn");
-const taskList = document.getElementById("task-list");
+document.addEventListener('DOMContentLoaded', () => {
+    const taskList = document.getElementById('task-list');
+    const addTaskBtn = document.getElementById('add-task-btn');
+    const taskInput = document.getElementById('task-name');
 
-// Function to create a new task
-function createTask(taskName) {
-    const li = document.createElement("li");
+    // Fetch existing tasks from server
+    fetch('/tasks')
+        .then(response => response.json())
+        .then(tasks => {
+            tasks.forEach(task => {
+                addTaskToList(task);
+            });
+        });
 
-    // Task name text
-    const taskText = document.createElement("span");
-    taskText.textContent = taskName;
-    li.appendChild(taskText);
+    // Add new task
+    addTaskBtn.addEventListener('click', () => {
+        const taskName = taskInput.value.trim();
+        if (!taskName) return;
 
-    // Complete button
-    const completeBtn = document.createElement("button");
-    completeBtn.textContent = "Complete";
-    completeBtn.addEventListener("click", () => toggleComplete(taskText));
-    li.appendChild(completeBtn);
+        fetch('/tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: taskName })
+        })
+        .then(response => response.json())
+        .then(task => {
+            addTaskToList(task);
+            taskInput.value = '';
+        });
+    });
 
-    // Delete button
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.addEventListener("click", () => deleteTask(li));
-    li.appendChild(deleteBtn);
-
-    taskList.appendChild(li);
-}
-
-// Function to toggle task completion
-function toggleComplete(taskText) {
-    taskText.parentElement.classList.toggle("completed");
-}
-
-// Function to delete a task
-function deleteTask(task) {
-    task.remove();
-}
-
-// Event listener for adding a new task
-addTaskButton.addEventListener("click", () => {
-    const taskName = taskNameInput.value.trim();
-    if (taskName) {
-        createTask(taskName);
-        taskNameInput.value = "";  // Clear input field
+    // Add task to the task list
+    function addTaskToList(task) {
+        const li = document.createElement('li');
+        li.setAttribute('data-id', task.id);
+        li.classList.toggle('completed', task.completed);
+        li.innerHTML = `
+            <span>${task.name}</span>
+            <div class="task-icons">
+                <span class="check-btn" onclick="toggleCompletion(${task.id})">&#x2714;</span>
+                <span class="delete-btn" onclick="deleteTask(${task.id})">&#10006;</span>
+            </div>
+        `;
+        taskList.appendChild(li);
     }
+
+    // Toggle task completion
+    window.toggleCompletion = function(taskId) {
+        fetch(`/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ completed: true })
+        })
+        .then(() => {
+            const taskItem = document.querySelector(`[data-id="${taskId}"]`);
+            taskItem.classList.toggle('completed');
+        })
+        .catch(() => {
+            alert('Error toggling task completion');
+        });
+    };
+
+    // Delete task
+    window.deleteTask = function(taskId) {
+        fetch(`/tasks/${taskId}`, {
+            method: 'DELETE'
+        })
+        .then(() => {
+            const taskItem = document.querySelector(`[data-id="${taskId}"]`);
+            taskItem.remove();
+        })
+        .catch(() => {
+            alert('Error deleting task');
+        });
+    };
 });

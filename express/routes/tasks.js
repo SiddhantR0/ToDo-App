@@ -1,12 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-// Placeholder
-let tasks = [
-    { id: 1, task_name: "Learn Express.js", is_completed: false },
-    { id: 2, task_name: "Set up MySQL", is_completed: false },
-];
-
 // GET 
 router.get("/", (req, res) => {
     res.json(tasks);
